@@ -9,7 +9,7 @@ from codebinder.rst import generate_indexes
 
 
 class RstTests(unittest.TestCase):
-    def test_generates_root_nested_indexes_and_structure(self) -> None:
+    def test_generates_root_nested_indexes_and_single_structure_page(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             notebook_paths = [
@@ -27,13 +27,21 @@ class RstTests(unittest.TestCase):
             self.assertIn("pkg/index", root_index)
             self.assertIn("utils.cpp", pkg_index)
             self.assertIn("sub/index", pkg_index)
-            self.assertIn("Project Folder Structure", root_index)
-            self.assertIn(".. code-block:: text", root_index)
-            self.assertIn("pkg/", root_index)
-            self.assertIn("header.h", root_index)
+
+            # The root page must remain a structural toctree page.  Embedding a
+            # section before the toctree nests the entire PDF under that section.
+            self.assertIn(".. toctree::", root_index)
+            self.assertIn("project_structure", root_index)
+            self.assertNotIn("Project Folder Structure", root_index)
+            self.assertNotIn(".. code-block:: text", root_index)
+            self.assertNotIn(":maxdepth:", root_index)
+
+            # The tree is rendered exactly once, in its dedicated notebook.
             self.assertIn("Project Folder Structure", "".join(structure["cells"][0]["source"]))
+            structure_source = "".join(structure["cells"][1]["source"])
+            self.assertIn("pkg/", structure_source)
+            self.assertIn("header.h", structure_source)
 
 
 if __name__ == "__main__":
     unittest.main()
-
