@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codebinder"
+version = "0.1.0"
+description = "Mirror a source project into nbsphinx-compatible notebooks"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pathspec>=0.12,<1"]
+
+[project.scripts]
+codebinder = "codebinder.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codebinder = ["templates/*.ipynb"]
+
