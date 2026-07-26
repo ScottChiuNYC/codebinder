@@ -13,7 +13,8 @@ and PDFs.
 - Leaves Markdown as Markdown and wraps other source in a fenced code block.
 - Copies common image/PDF assets alongside the generated notebooks.
 - Creates `index.rst` in the root and every discovered output folder.
-- Adds a project-folder-structure notebook and an RST rendering of the tree.
+- Creates one project-folder-structure notebook and references it from the root toctree.
+- Keeps the root index structural, so top-level documents and folders become separate PDF chapters instead of being nested under the folder-structure page.
 
 ## Install
 
@@ -32,4 +33,3 @@ If `output_path` is omitted, the Windows-compatible default is
 
 For example, a source file `src/module.py` produces
 `src/module.py.ipynb`, and its toctree entry is `src/module.py`.
-
