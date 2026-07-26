@@ -68,14 +68,12 @@ def _create_structure_notebook(tree_lines: list[str]) -> dict:
     return notebook
 
 
-def _make_index_content(title: str, entries: list[str], tree_lines: list[str] | None = None) -> str:
+def _make_index_content(title: str, entries: list[str]) -> str:
+    """Create a structural index whose toctree is not nested under a section."""
+
     lines: list[str] = [title, "=" * len(title), ""]
-    if tree_lines is not None:
-        lines.extend(["Project Folder Structure", "------------------------", "", ".. code-block:: text", ""])
-        lines.extend(f"   {line}" for line in tree_lines)
-        lines.append("")
     if entries:
-        lines.extend([".. toctree::", "   :maxdepth: 1", ""])
+        lines.extend([".. toctree::", ""])
         lines.extend(f"   {entry}" for entry in entries)
         lines.append("")
     else:
@@ -126,16 +124,12 @@ def generate_indexes(
             with structure_path.open("w", encoding="utf-8", newline="\n") as handle:
                 json.dump(structure_notebook, handle, ensure_ascii=False, indent=2)
                 handle.write("\n")
-            tree_lines: list[str] | None = root_tree_lines
         else:
             entries = notebook_entries + child_entries
-            tree_lines = None
 
         content = _make_index_content(
             _title_for_dir(directory, output_root, project_name),
             entries,
-            tree_lines,
         )
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "index.rst").write_text(content, encoding="utf-8", newline="\n")
-
