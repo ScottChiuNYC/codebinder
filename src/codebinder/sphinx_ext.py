@@ -37,7 +37,9 @@ def _replace_section_with_rubric(section: nodes.section) -> None:
     if title is None:
         return
 
-    depth = _section_depth(section)
+    # The outermost section is the CodeBinder-inserted source-file title. A
+    # content heading one level below it is therefore content level 1.
+    content_depth = max(_section_depth(section) - 1, 1)
     rubric = nodes.rubric(
         title.rawsource,
         "",
@@ -48,7 +50,7 @@ def _replace_section_with_rubric(section: nodes.section) -> None:
     rubric["classes"] = [
         *section.get("classes", []),
         "codebinder-content-heading",
-        f"codebinder-content-heading-level-{min(depth, 6)}",
+        f"codebinder-content-heading-level-{min(content_depth, 6)}",
     ]
 
     remaining_children = [child for child in section.children if child is not title]
@@ -69,13 +71,16 @@ def suppress_content_sections_from_latex_toc(app: Sphinx, doctree: nodes.documen
     if not _is_generated_source_document(docname):
         return
 
-    # CodeBinder inserts the source filename as the notebook document title.
-    # nbsphinx promotes that title separately, while the headings from the source
-    # Markdown become section nodes.  Replace those sections deepest-first so the
-    # body hierarchy and anchors survive, but LaTeX emits unnumbered rubric
-    # headings instead of section commands that pollute the global table of
-    # contents.
-    sections = list(doctree.findall(nodes.section))
+    # nbsphinx represents the CodeBinder-inserted filename heading as the
+    # outermost section. Preserve that section so the file remains a numbered
+    # structural entry in the PDF hierarchy. Headings from the source Markdown
+    # are descendant sections; replace only those, deepest-first, so their body
+    # hierarchy and anchors survive without generating LaTeX section commands.
+    sections = [
+        section
+        for section in doctree.findall(nodes.section)
+        if _section_depth(section) > 1
+    ]
     for section in reversed(sections):
         _replace_section_with_rubric(section)
 
@@ -85,7 +90,7 @@ def setup(app: Sphinx) -> dict[str, object]:
     app.add_config_value("codebinder_structural_latex_toc", True, "env")
     app.connect("doctree-read", suppress_content_sections_from_latex_toc)
     return {
-        "version": "0.1",
+        "version": "0.2",
         "parallel_read_safe": True,
         "parallel_write_safe": True,
     }
