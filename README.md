@@ -17,6 +17,13 @@ and PDFs.
 - Keeps generated toctrees structural and title-only, without a fixed maximum depth.
 - Provides an optional Sphinx extension that keeps source-file headings visible in LaTeX output without adding them to the global PDF table of contents.
 
+## Documentation
+
+See [`docs/architecture.md`](docs/architecture.md) for the detailed discovery,
+conversion, recursive-index, Sphinx-extension, and PDF table-of-contents contract.
+The architecture document also records current limitations, including the fact
+that source `.ipynb` files are not yet included.
+
 ## Install
 
 ```console
