@@ -19,7 +19,12 @@ def _make_app(*, builder_format: str, docname: str, enabled: bool = True):
 
 def _make_document() -> nodes.document:
     document = new_document("research/PDE.md")
-    document += nodes.title("", "PDE.md")
+
+    # This mirrors the nbsphinx shape produced by CodeBinder: the injected
+    # filename heading is the outermost section, and source Markdown headings
+    # are nested sections below it.
+    file_section = nodes.section(ids=["pde-md"], names=["pde.md"])
+    file_section += nodes.title("", "PDE.md")
 
     formulation = nodes.section(ids=["formulation"], names=["formulation"])
     formulation += nodes.title("", "PDE formulation")
@@ -30,18 +35,23 @@ def _make_document() -> nodes.document:
     boundary += nodes.paragraph("", "Boundary body.")
     formulation += boundary
 
-    document += formulation
+    file_section += formulation
+    document += file_section
     return document
 
 
 class SphinxExtensionTests(unittest.TestCase):
-    def test_latex_source_document_replaces_content_sections_with_rubrics(self) -> None:
+    def test_latex_source_document_preserves_file_title_and_replaces_content_sections(self) -> None:
         document = _make_document()
         app = _make_app(builder_format="latex", docname="research/PDE.md")
 
         suppress_content_sections_from_latex_toc(app, document)
 
-        self.assertEqual(list(document.findall(nodes.section)), [])
+        sections = list(document.findall(nodes.section))
+        self.assertEqual(len(sections), 1)
+        self.assertEqual(sections[0].astext().splitlines()[0], "PDE.md")
+        self.assertEqual(sections[0]["ids"], ["pde-md"])
+
         rubrics = list(document.findall(nodes.rubric))
         self.assertEqual([rubric.astext() for rubric in rubrics], [
             "PDE formulation",
@@ -61,7 +71,7 @@ class SphinxExtensionTests(unittest.TestCase):
 
         suppress_content_sections_from_latex_toc(app, document)
 
-        self.assertEqual(len(list(document.findall(nodes.section))), 2)
+        self.assertEqual(len(list(document.findall(nodes.section))), 3)
         self.assertEqual(list(document.findall(nodes.rubric)), [])
 
     def test_structural_index_document_is_not_rewritten(self) -> None:
@@ -70,7 +80,7 @@ class SphinxExtensionTests(unittest.TestCase):
 
         suppress_content_sections_from_latex_toc(app, document)
 
-        self.assertEqual(len(list(document.findall(nodes.section))), 2)
+        self.assertEqual(len(list(document.findall(nodes.section))), 3)
         self.assertEqual(list(document.findall(nodes.rubric)), [])
 
 
