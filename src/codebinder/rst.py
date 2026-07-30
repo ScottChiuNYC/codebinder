@@ -17,7 +17,6 @@ def _title_for_dir(directory: Path, root: Path, project_name: str) -> str:
 
 def _build_tree_lines(notebook_paths: list[Path]) -> list[str]:
     """Build a simple Unicode folder tree from generated notebook paths."""
-
     children: dict[Path, set[Path]] = {Path(""): set()}
     files_by_dir: dict[Path, set[str]] = {Path(""): set()}
     for notebook_path in sorted(notebook_paths):
@@ -69,11 +68,10 @@ def _create_structure_notebook(tree_lines: list[str]) -> dict:
 
 
 def _make_index_content(title: str, entries: list[str]) -> str:
-    """Create a structural index whose toctree is not nested under a section."""
-
+    """Create a structural index whose toctree lists document titles only."""
     lines: list[str] = [title, "=" * len(title), ""]
     if entries:
-        lines.extend([".. toctree::", ""])
+        lines.extend([".. toctree::", "   :titlesonly:", ""])
         lines.extend(f"   {entry}" for entry in entries)
         lines.append("")
     else:
@@ -88,7 +86,6 @@ def generate_indexes(
     discovered_dirs: set[Path] | None = None,
 ) -> None:
     """Write root and per-folder indexes plus a project-structure notebook."""
-
     output_root = Path(output_root)
     dirs_with_notebooks = {output_root}
     for notebook in notebook_paths:
