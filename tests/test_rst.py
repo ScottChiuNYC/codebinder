@@ -28,13 +28,18 @@ class RstTests(unittest.TestCase):
             self.assertIn("utils.cpp", pkg_index)
             self.assertIn("sub/index", pkg_index)
 
-            # The root page must remain a structural toctree page.  Embedding a
+            # The root page must remain a structural toctree page. Embedding a
             # section before the toctree nests the entire PDF under that section.
             self.assertIn(".. toctree::", root_index)
+            self.assertIn("   :titlesonly:", root_index)
             self.assertIn("project_structure", root_index)
             self.assertNotIn("Project Folder Structure", root_index)
             self.assertNotIn(".. code-block:: text", root_index)
             self.assertNotIn(":maxdepth:", root_index)
+
+            # Every folder index is structural too: it lists child document
+            # titles without asking Sphinx to surface headings from inside them.
+            self.assertIn("   :titlesonly:", pkg_index)
 
             # The tree is rendered exactly once, in its dedicated notebook.
             self.assertIn("Project Folder Structure", "".join(structure["cells"][0]["source"]))
