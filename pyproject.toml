@@ -10,6 +10,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["pathspec>=0.12,<1"]
 
+[project.optional-dependencies]
+test = ["docutils>=0.18,<0.22"]
+
 [project.scripts]
 codebinder = "codebinder.cli:main"
 
@@ -22,4 +25,3 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 codebinder = ["templates/*.ipynb"]
-
