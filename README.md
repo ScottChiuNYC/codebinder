@@ -7,7 +7,7 @@ and PDFs.
 ## What it does
 
 - Walks a project folder recursively.
-- Respects a root `.gitignore`, including negation rules.
+- Respects root `.gitignore` and `.codebinderignore` files with gitignore-style pattern and negation semantics.
 - Includes common source, documentation, configuration, and data files.
 - Creates `<original_name>.ipynb` for every included text file.
 - Leaves Markdown as Markdown and wraps other source in a fenced code block.
@@ -16,6 +16,24 @@ and PDFs.
 - Creates one project-folder-structure notebook and references it from the root toctree.
 - Keeps generated toctrees structural and title-only, without a fixed maximum depth.
 - Provides an optional Sphinx extension that keeps source-file headings visible in LaTeX output without adding them to the global PDF table of contents.
+
+## Project-specific ignore rules
+
+Use a root `.codebinderignore` when a file should remain tracked by Git but should
+not become part of the generated CodeBinder documentation tree. Patterns use the
+same `gitwildmatch` syntax as the root `.gitignore`, including `!` negation rules.
+For example:
+
+```gitignore
+# Keep market data in the repository, but out of generated documentation.
+market-data/**
+!market-data/README.md
+```
+
+The root `.gitignore` and `.codebinderignore` are evaluated independently. A path
+is excluded if either file ignores it, so `.codebinderignore` cannot re-include a
+path already excluded by `.gitignore`. The same filtering applies to converted
+text files and copied assets. Nested ignore files are not currently loaded.
 
 ## Documentation
 

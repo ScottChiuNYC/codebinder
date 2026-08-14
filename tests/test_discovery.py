@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codebinder.discovery import discover_files
+from codebinder.discovery import discover_assets, discover_files
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -41,7 +41,47 @@ class DiscoveryTests(unittest.TestCase):
             self.assertNotIn("ignored.py", relative)
             self.assertNotIn("skip_dir/inside.txt", relative)
 
+    def test_respects_codebinderignore_patterns_and_negation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".codebinderignore").write_text(
+                "market-data/**\n!market-data/README.md\n*.secret.txt\n",
+                encoding="utf-8",
+            )
+            (root / "market-data").mkdir()
+            (root / "market-data" / "prices.csv").write_text("x,y\n", encoding="utf-8")
+            (root / "market-data" / "README.md").write_text("# Data\n", encoding="utf-8")
+            (root / "notes.secret.txt").write_text("private\n", encoding="utf-8")
+            (root / "visible.txt").write_text("public\n", encoding="utf-8")
+
+            relative = {item.relative_path.as_posix() for item in discover_files(root)}
+            self.assertIn("market-data/README.md", relative)
+            self.assertIn("visible.txt", relative)
+            self.assertNotIn("market-data/prices.csv", relative)
+            self.assertNotIn("notes.secret.txt", relative)
+
+    def test_codebinderignore_cannot_reinclude_gitignored_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".gitignore").write_text("private.csv\n", encoding="utf-8")
+            (root / ".codebinderignore").write_text("!private.csv\n", encoding="utf-8")
+            (root / "private.csv").write_text("x,y\n", encoding="utf-8")
+
+            relative = {item.relative_path.as_posix() for item in discover_files(root)}
+            self.assertNotIn("private.csv", relative)
+
+    def test_codebinderignore_filters_assets_too(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".codebinderignore").write_text("private-assets/\n", encoding="utf-8")
+            (root / "private-assets").mkdir()
+            (root / "private-assets" / "chart.png").write_bytes(b"\x89PNG")
+            (root / "public.png").write_bytes(b"\x89PNG")
+
+            relative = {relative.as_posix() for _, relative in discover_assets(root)}
+            self.assertIn("public.png", relative)
+            self.assertNotIn("private-assets/chart.png", relative)
+
 
 if __name__ == "__main__":
     unittest.main()
-

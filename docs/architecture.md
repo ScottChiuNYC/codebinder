@@ -12,7 +12,7 @@ CodeBinder applies the following pipeline:
 
 ```text
 source project
-    ↓ recursive discovery and .gitignore filtering
+    ↓ recursive discovery and root ignore-file filtering
 included text files + supported assets
     ↓ conversion and copying
 generated notebooks + mirrored assets
@@ -33,10 +33,21 @@ CodeBinder itself does not build HTML or PDF files. It creates an nbsphinx-compa
 Discovery:
 
 - respects the root `.gitignore`, including negation rules when `pathspec` is installed;
+- also respects an optional root `.codebinderignore` using the same `gitwildmatch` syntax and negation semantics;
+- evaluates `.gitignore` and `.codebinderignore` independently and excludes a path if either specification ignores it, so `.codebinderignore` cannot re-include a path already excluded by `.gitignore`;
 - always ignores repository metadata and common generated directories such as `.git`, virtual environments, Python caches, and `node_modules`;
 - applies the same ignore logic to text files and copied assets.
 
-The root `.gitignore` is the only project ignore file interpreted by CodeBinder. Nested `.gitignore` files are not currently loaded independently.
+`.codebinderignore` exists for material that should remain present and possibly tracked in the source repository but should not become part of the generated CodeBinder documentation tree. For example:
+
+```gitignore
+market-data/**
+!market-data/README.md
+```
+
+keeps the market-data payload out of generated notebooks while allowing a tracked explanatory README to remain visible.
+
+Only the root `.gitignore` and root `.codebinderignore` are interpreted. Nested ignore files are not currently loaded independently. The normal installed dependency is `pathspec`, which provides the full `gitwildmatch` behavior. The source tree retains a small fallback matcher only so an unpacked checkout remains usable before dependencies are installed.
 
 ### 2.2 Included text files
 
@@ -277,7 +288,7 @@ A PDF-producing repository should:
 4. decide whether notebooks are executed;
 5. provide fonts and LaTeX dependencies required by its content;
 6. validate both the generated PDF and the printed TOC;
-7. add repository-specific assertions for important folder and file entries;
+7. add repository-specific assertions for important included and ignored paths;
 8. inspect a rendered TOC after structural changes.
 
 CodeBinder cannot guarantee that arbitrary Markdown, raw LaTeX, tables, equations, fonts, or cross-references compile correctly in every consumer project.
@@ -287,7 +298,8 @@ CodeBinder cannot guarantee that arbitrary Markdown, raw LaTeX, tables, equation
 Changes should preserve these invariants unless a deliberate breaking change is documented:
 
 - discovery order is deterministic;
-- ignored files and assets remain ignored consistently;
+- root `.gitignore` and `.codebinderignore` rules are applied consistently to files and assets;
+- an exclusion from either ignore specification remains excluded;
 - relative source and asset paths are preserved;
 - each included source file produces exactly one generated notebook;
 - each discovered folder receives one structural index;
@@ -301,15 +313,17 @@ Changes should preserve these invariants unless a deliberate breaking change is 
 
 When changing discovery, conversion, RST generation, or the Sphinx extension:
 
-1. update or add focused unit tests;
-2. run `python -m unittest discover -s tests -v`;
-3. verify root and nested `index.rst` output;
-4. verify the project structure notebook is generated once;
-5. verify file titles remain structural sections in a representative nbsphinx doctree;
-6. verify nested content headings become anchored rubrics only for LaTeX;
-7. verify HTML and structural index documents are unchanged;
-8. build at least one real consumer PDF when TOC semantics change;
-9. inspect the generated `.toc` file;
-10. visually inspect the printed table of contents.
+1. update the README or architecture documentation for every user-visible or developer-facing feature in the same pull request;
+2. update or add focused unit tests;
+3. run `python -m unittest discover -s tests -v`;
+4. verify root and nested `index.rst` output;
+5. verify the project structure notebook is generated once;
+6. verify file titles remain structural sections in a representative nbsphinx doctree;
+7. verify nested content headings become anchored rubrics only for LaTeX;
+8. verify HTML and structural index documents are unchanged;
+9. build at least one real consumer PDF when discovery or TOC semantics change;
+10. for ignore-rule changes, assert in the consumer build that representative ignored files do not appear in the generated notebook tree;
+11. inspect the generated `.toc` file when structural TOC behavior changes;
+12. visually inspect the printed table of contents when structural TOC behavior changes.
 
-A unit test proves the transform's local contract. A real consumer build is still required because Sphinx, nbsphinx, LaTeX, document content, and project-specific post-processing interact across repository boundaries.
+A unit test proves a local contract. A real consumer build is still required when behavior crosses repository boundaries because Sphinx, nbsphinx, LaTeX, document content, ignore rules, and project-specific post-processing interact across repositories.
