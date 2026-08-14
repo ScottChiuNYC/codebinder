@@ -40,6 +40,8 @@ IGNORED_DIRS = {
     ".pytest_cache", ".ruff_cache", "node_modules",
 }
 
+IGNORE_FILES = (".gitignore", ".codebinderignore")
+
 
 @dataclass(frozen=True)
 class DiscoveredFile:
@@ -87,34 +89,43 @@ def is_asset(path: Path) -> bool:
     return path.suffix.lower() in ASSET_EXTENSIONS
 
 
-def _load_gitignore_spec(source_root: Path):
-    gitignore_path = source_root / ".gitignore"
-    if not gitignore_path.exists():
+def _load_ignore_spec(source_root: Path, filename: str):
+    ignore_path = source_root / filename
+    if not ignore_path.exists():
         return None
-    lines = gitignore_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = ignore_path.read_text(encoding="utf-8", errors="replace").splitlines()
     if pathspec is not None:
         return pathspec.PathSpec.from_lines("gitwildmatch", lines)
     return _SimpleGitIgnoreSpec(lines)
 
 
-def _is_ignored(relative_path: Path, gitignore_spec) -> bool:
+def _load_ignore_specs(source_root: Path) -> tuple[object, ...]:
+    return tuple(
+        spec
+        for filename in IGNORE_FILES
+        if (spec := _load_ignore_spec(source_root, filename)) is not None
+    )
+
+
+def _is_ignored(relative_path: Path, ignore_specs: tuple[object, ...]) -> bool:
     if any(part in IGNORED_DIRS for part in relative_path.parts):
         return True
-    return gitignore_spec is not None and gitignore_spec.match_file(relative_path.as_posix())
+    relative = relative_path.as_posix()
+    return any(spec.match_file(relative) for spec in ignore_specs)
 
 
 def discover_files(source_root: Path) -> list[DiscoveredFile]:
     """Return included files in deterministic relative-path order."""
 
     source_root = Path(source_root)
-    gitignore_spec = _load_gitignore_spec(source_root)
+    ignore_specs = _load_ignore_specs(source_root)
     discovered: list[DiscoveredFile] = []
 
     for path in sorted(source_root.rglob("*")):
         if not path.is_file():
             continue
         relative = path.relative_to(source_root)
-        if _is_ignored(relative, gitignore_spec) or not should_include(path):
+        if _is_ignored(relative, ignore_specs) or not should_include(path):
             continue
         discovered.append(
             DiscoveredFile(
@@ -130,14 +141,13 @@ def discover_assets(source_root: Path) -> list[tuple[Path, Path]]:
     """Return binary assets to copy verbatim beside generated notebooks."""
 
     source_root = Path(source_root)
-    gitignore_spec = _load_gitignore_spec(source_root)
+    ignore_specs = _load_ignore_specs(source_root)
     assets: list[tuple[Path, Path]] = []
     for path in sorted(source_root.rglob("*")):
         if not path.is_file():
             continue
         relative = path.relative_to(source_root)
-        if _is_ignored(relative, gitignore_spec) or not is_asset(path):
+        if _is_ignored(relative, ignore_specs) or not is_asset(path):
             continue
         assets.append((path, relative))
     return assets
-
