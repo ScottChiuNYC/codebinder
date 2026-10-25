@@ -60,6 +60,38 @@ class DiscoveryTests(unittest.TestCase):
             self.assertNotIn("market-data/prices.csv", relative)
             self.assertNotIn("notes.secret.txt", relative)
 
+    def test_respects_codebinderignore_d_fragments(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fragments = root / ".codebinderignore.d"
+            fragments.mkdir()
+            (fragments / "art").write_text("AGENTS.md\n.github/workflows/**\n", encoding="utf-8")
+            (fragments / "pypackage-cpp").write_text(
+                "CMakeLists.txt\n**/CMakeLists.txt\nbuild.py\n",
+                encoding="utf-8",
+            )
+            (root / "AGENTS.md").write_text("# Agent guide\n", encoding="utf-8")
+            (root / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.25)\n", encoding="utf-8")
+            (root / "build.py").write_text("print('build')\n", encoding="utf-8")
+            (root / "src").mkdir()
+            (root / "src" / "solver.cpp").write_text("int solver() { return 1; }\n", encoding="utf-8")
+
+            relative = {item.relative_path.as_posix() for item in discover_files(root)}
+            self.assertEqual(relative, {"src/solver.cpp"})
+
+    def test_codebinderignore_d_fragments_are_independent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fragments = root / ".codebinderignore.d"
+            fragments.mkdir()
+            (fragments / "a").write_text("private/**\n", encoding="utf-8")
+            (fragments / "b").write_text("!private/README.md\n", encoding="utf-8")
+            (root / "private").mkdir()
+            (root / "private" / "README.md").write_text("# Private\n", encoding="utf-8")
+
+            relative = {item.relative_path.as_posix() for item in discover_files(root)}
+            self.assertNotIn("private/README.md", relative)
+
     def test_codebinderignore_cannot_reinclude_gitignored_file(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

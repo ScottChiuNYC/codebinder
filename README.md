@@ -7,7 +7,7 @@ and PDFs.
 ## What it does
 
 - Walks a project folder recursively.
-- Respects root `.gitignore` and `.codebinderignore` files with gitignore-style pattern and negation semantics.
+- Respects root `.gitignore`, optional `.codebinderignore`, and composable `.codebinderignore.d/*` fragments with gitignore-style patterns.
 - Includes common source, documentation, configuration, and data files.
 - Creates `<original_name>.ipynb` for every included text file.
 - Leaves Markdown as Markdown and wraps other source in a fenced code block.
@@ -32,8 +32,17 @@ market-data/**
 
 The root `.gitignore` and `.codebinderignore` are evaluated independently. A path
 is excluded if either file ignores it, so `.codebinderignore` cannot re-include a
-path already excluded by `.gitignore`. The same filtering applies to converted
-text files and copied assets. Nested ignore files are not currently loaded.
+path already excluded by `.gitignore`.
+
+For composable configuration, CodeBinder also loads each regular file directly
+inside root `.codebinderignore.d/`, in deterministic filename order. Each fragment
+is evaluated as an independent ignore spec. This lets multiple repository templates
+own separate drop-ins such as `.codebinderignore.d/art` and
+`.codebinderignore.d/pypackage-cpp` without sharing one generated file. A negation
+in one fragment cannot re-include a path ignored by another fragment.
+
+The same filtering applies to converted text files and copied assets. Nested
+fragment directories are not loaded.
 
 ## Documentation
 
