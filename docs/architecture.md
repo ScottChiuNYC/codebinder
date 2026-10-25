@@ -33,21 +33,31 @@ CodeBinder itself does not build HTML or PDF files. It creates an nbsphinx-compa
 Discovery:
 
 - respects the root `.gitignore`, including negation rules when `pathspec` is installed;
-- also respects an optional root `.codebinderignore` using the same `gitwildmatch` syntax and negation semantics;
-- evaluates `.gitignore` and `.codebinderignore` independently and excludes a path if either specification ignores it, so `.codebinderignore` cannot re-include a path already excluded by `.gitignore`;
+- respects an optional root `.codebinderignore` using the same `gitwildmatch` syntax and negation semantics;
+- loads every regular file directly inside root `.codebinderignore.d/`, in deterministic filename order, as an independent ignore specification;
+- evaluates all ignore specifications independently and excludes a path if any specification ignores it;
+- therefore does not allow a negation in one source to re-include a path already excluded by another source;
+- does not recursively load nested directories below `.codebinderignore.d/`;
 - always ignores repository metadata and common generated directories such as `.git`, virtual environments, Python caches, and `node_modules`;
 - applies the same ignore logic to text files and copied assets.
 
-`.codebinderignore` exists for material that should remain present and possibly tracked in the source repository but should not become part of the generated CodeBinder documentation tree. For example:
+`.codebinderignore` exists for project-owned material that should remain tracked in the source repository but should not become part of the generated CodeBinder documentation tree. For example:
 
 ```gitignore
 market-data/**
 !market-data/README.md
 ```
 
-keeps the market-data payload out of generated notebooks while allowing a tracked explanatory README to remain visible.
+keeps the market-data payload out of generated notebooks while allowing a tracked explanatory README to remain visible, provided another independent ignore source has not already excluded that README.
 
-Only the root `.gitignore` and root `.codebinderignore` are interpreted. Nested ignore files are not currently loaded independently. The normal installed dependency is `pathspec`, which provides the full `gitwildmatch` behavior. The source tree retains a small fallback matcher only so an unpacked checkout remains usable before dependencies are installed.
+The drop-in directory exists for composable ownership. Multiple templates or subsystems can own separate fragments such as:
+
+```text
+.codebinderignore.d/art
+.codebinderignore.d/pypackage-cpp
+```
+
+without competing for one generated root file. A template should modify only its own fragment. The normal installed dependency is `pathspec`, which provides full `gitwildmatch` behavior. The source tree retains a small fallback matcher only so an unpacked checkout remains usable before dependencies are installed.
 
 ### 2.2 Included text files
 
@@ -298,8 +308,9 @@ CodeBinder cannot guarantee that arbitrary Markdown, raw LaTeX, tables, equation
 Changes should preserve these invariants unless a deliberate breaking change is documented:
 
 - discovery order is deterministic;
-- root `.gitignore` and `.codebinderignore` rules are applied consistently to files and assets;
-- an exclusion from either ignore specification remains excluded;
+- root `.gitignore`, optional `.codebinderignore`, and root `.codebinderignore.d/*` fragment rules are applied consistently to files and assets;
+- each ignore source is independent, and an exclusion from any source remains excluded;
+- ignore fragments are loaded deterministically and only from regular files directly inside root `.codebinderignore.d/`;
 - relative source and asset paths are preserved;
 - each included source file produces exactly one generated notebook;
 - each discovered folder receives one structural index;
@@ -322,8 +333,9 @@ When changing discovery, conversion, RST generation, or the Sphinx extension:
 7. verify nested content headings become anchored rubrics only for LaTeX;
 8. verify HTML and structural index documents are unchanged;
 9. build at least one real consumer PDF when discovery or TOC semantics change;
-10. for ignore-rule changes, assert in the consumer build that representative ignored files do not appear in the generated notebook tree;
-11. inspect the generated `.toc` file when structural TOC behavior changes;
-12. visually inspect the printed table of contents when structural TOC behavior changes.
+10. for ignore-rule changes, test root `.codebinderignore`, multiple `.codebinderignore.d/*` fragments, independent-negation semantics, deterministic fragment loading, and representative ignored assets as well as text files;
+11. for behavior used by an external publication stack, build at least one real consumer pinned to the new CodeBinder revision and assert representative included/ignored paths;
+12. inspect the generated `.toc` file when structural TOC behavior changes;
+13. visually inspect the printed table of contents when structural TOC behavior changes.
 
 A unit test proves a local contract. A real consumer build is still required when behavior crosses repository boundaries because Sphinx, nbsphinx, LaTeX, document content, ignore rules, and project-specific post-processing interact across repositories.

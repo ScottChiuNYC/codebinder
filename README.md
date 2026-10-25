@@ -44,6 +44,16 @@ in one fragment cannot re-include a path ignored by another fragment.
 The same filtering applies to converted text files and copied assets. Nested
 fragment directories are not loaded.
 
+## Consumer versioning
+
+CodeBinder is a library/tooling component, not the owner of a consumer's deployment environment. Consumers that need reproducible publication should pin CodeBinder to an immutable commit or release inside their environment definition, then pin the resulting environment artifact as appropriate.
+
+For example, ART pins a CodeBinder commit in its PDF-builder Dockerfile, publishes that builder to GHCR, and pins the resulting image by immutable digest in generated downstream workflows. A CodeBinder behavior change therefore requires an explicit consumer upgrade; rebuilding an image does not silently change already-pinned downstream repositories.
+
+ART's broader cross-repository maintenance model is documented at:
+
+https://github.com/ScottChiuNYC/agentic-repo-template/blob/main/docs/ecosystem-architecture.md
+
 ## Documentation
 
 See [`docs/architecture.md`](docs/architecture.md) for the detailed discovery,
