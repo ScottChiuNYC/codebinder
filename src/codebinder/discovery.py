@@ -41,6 +41,7 @@ IGNORED_DIRS = {
 }
 
 IGNORE_FILES = (".gitignore", ".codebinderignore")
+IGNORE_FRAGMENT_DIR = ".codebinderignore.d"
 
 
 @dataclass(frozen=True)
@@ -100,11 +101,22 @@ def _load_ignore_spec(source_root: Path, filename: str):
 
 
 def _load_ignore_specs(source_root: Path) -> tuple[object, ...]:
-    return tuple(
+    specs = [
         spec
         for filename in IGNORE_FILES
         if (spec := _load_ignore_spec(source_root, filename)) is not None
-    )
+    ]
+
+    fragment_dir = source_root / IGNORE_FRAGMENT_DIR
+    if fragment_dir.is_dir():
+        for fragment_path in sorted(path for path in fragment_dir.iterdir() if path.is_file()):
+            lines = fragment_path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if pathspec is not None:
+                specs.append(pathspec.PathSpec.from_lines("gitwildmatch", lines))
+            else:
+                specs.append(_SimpleGitIgnoreSpec(lines))
+
+    return tuple(specs)
 
 
 def _is_ignored(relative_path: Path, ignore_specs: tuple[object, ...]) -> bool:
